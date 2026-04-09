@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "json-as-xlsx": "^2.5.6"
+  }
+}
