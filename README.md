@@ -97,5 +97,4 @@ When a user selects a locality and their personal health profile ("Persona"):
 - [ ] **SMS Alerts:** Integrated push notifications via Twilio for emergency pollution spikes.
 - [ ] **PWA Support:** Make the application installable on mobile devices for ease of access.
 
----
-*Built with ❤️ for the Google Solution Challenge.*
+
