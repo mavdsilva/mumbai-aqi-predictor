@@ -3,7 +3,7 @@ const axios = require('axios');
 const cors = require('cors');
 const mongoose = require('mongoose'); 
 require('dotenv').config();
-const { generateHealthTip } = require('./services/geminiService');
+const { generateAIInsights } = require('./services/geminiService');
 
 const app = express();
 app.use(cors());
@@ -65,19 +65,24 @@ const applyAdvancedHeuristics = (baseAqi, areaName) => {
 // 3. API Route for Current Air Data
 app.get('/api/air', async (req, res) => {
   try {
-    const { lat, lon, areaName } = req.query;
+    const { lat, lon, areaName, persona } = req.query;
     const apiUrl = `http://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${process.env.OPENWEATHER_API_KEY}`;
     
     const response = await axios.get(apiUrl);
 
     if (response.data?.list?.[0]) {
-      const pm25 = response.data.list[0].components.pm2_5; 
+      const components = response.data.list[0].components; 
+      const pm25 = components.pm2_5; 
 
       const baseAqi = calculateIndianAQI(pm25);
       const processedAqi = applyAdvancedHeuristics(baseAqi, areaName);
 
-      // Generate AI-powered health tip
-      const healthTip = await generateHealthTip(areaName, processedAqi);
+      // Fetch history for AI trend prediction
+      const history = await AqiRecord.find({ city: areaName }).sort({ timestamp: -1 }).limit(5);
+      const recentHistory = history.reverse(); // oldest to newest
+
+      // Generate AI-powered insights
+      const aiInsights = await generateAIInsights(areaName, processedAqi, persona, components, recentHistory);
 
       const newEntry = new AqiRecord({
         city: areaName, 
@@ -94,11 +99,12 @@ app.get('/api/air', async (req, res) => {
           aqi: processedAqi, 
           city: { name: `${areaName}, Mumbai` }, 
           dominentpol: "pm2_5",
-          healthTip
+          insights: aiInsights
         }
       });
     }
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Internal processing failure" });
   }
 });

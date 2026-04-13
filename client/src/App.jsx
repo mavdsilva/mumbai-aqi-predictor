@@ -16,19 +16,22 @@ const MUMBAI_STATIONS = [
   { name: "Vile Parle", lat: 19.0968, lon: 72.8485 }
 ];
 
+const PERSONAS = ["General Public", "Asthma Patient", "Outdoor Athlete", "Elderly"];
+
 function App() {
   const [data, setData] = useState(null);
   const [processingInfo, setProcessingInfo] = useState(null);
   const [history, setHistory] = useState([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedStation, setSelectedStation] = useState(MUMBAI_STATIONS[0]); 
+  const [selectedPersona, setSelectedPersona] = useState(PERSONAS[0]);
   const [lastUpdated, setLastUpdated] = useState("");
 
-  const fetchAllData = async (station = selectedStation) => {
+  const fetchAllData = async (station = selectedStation, persona = selectedPersona) => {
     setIsRefreshing(true);
     try {
       const liveRes = await axios.get(
-        `http://localhost:5000/api/air?lat=${station.lat}&lon=${station.lon}&areaName=${station.name}`
+        `http://localhost:5000/api/air?lat=${station.lat}&lon=${station.lon}&areaName=${station.name}&persona=${encodeURIComponent(persona)}`
       );
       
       if (liveRes.data.status === "ok") {
@@ -46,7 +49,6 @@ function App() {
     }
   };
 
-  // Google Research Skill: Calculating Trends from Raw Data
   const calculateTrend = () => {
     if (history.length < 2) return { label: "Stable", icon: <Activity size={16}/> };
     const diff = history[0].aqi - history[1].aqi;
@@ -71,7 +73,7 @@ function App() {
     xlsx(dataForExcel, settings);
   };
 
-  useEffect(() => { fetchAllData(MUMBAI_STATIONS[0]); }, []);
+  useEffect(() => { fetchAllData(MUMBAI_STATIONS[0], PERSONAS[0]); }, []);
 
   if (!data) return <div className="h-screen flex items-center justify-center bg-slate-950 text-blue-500 font-mono italic animate-pulse">Initializing Research Pipeline...</div>;
 
@@ -89,19 +91,32 @@ function App() {
             <p className="text-[10px] text-indigo-200/50 font-mono mt-1.5 tracking-[0.2em]">SMART ANALYTICS ENGINE V2.0.0</p>
           </div>
           
-          <div className="flex gap-3 mt-4 md:mt-0">
+          <div className="flex flex-wrap gap-3 mt-4 md:mt-0">
             <select 
               className="bg-slate-800 border-none rounded-xl py-2 px-4 text-sm font-bold focus:ring-2 focus:ring-blue-500"
               value={selectedStation.name}
               onChange={(e) => {
                 const s = MUMBAI_STATIONS.find(x => x.name === e.target.value);
                 setSelectedStation(s);
-                fetchAllData(s);
+                fetchAllData(s, selectedPersona);
               }}
             >
               {MUMBAI_STATIONS.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
             </select>
-            <button onClick={() => fetchAllData()} className="p-2 bg-slate-800 rounded-xl hover:bg-slate-700 transition-all">
+
+            <select 
+              className="bg-slate-800 border-none rounded-xl py-2 px-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 text-purple-300"
+              value={selectedPersona}
+              onChange={(e) => {
+                const p = e.target.value;
+                setSelectedPersona(p);
+                fetchAllData(selectedStation, p);
+              }}
+            >
+              {PERSONAS.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+
+            <button onClick={() => fetchAllData(selectedStation, selectedPersona)} className="p-2 bg-slate-800 rounded-xl hover:bg-slate-700 transition-all">
               <RefreshCw size={18} className={isRefreshing ? "animate-spin" : ""} />
             </button>
             <button onClick={downloadExcel} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-xl text-xs font-bold transition-all">
@@ -111,27 +126,43 @@ function App() {
         </header>
 
         {/* AI INSIGHT CARD */}
-        {data.healthTip && (
+        {data.insights && (
           <div className="mb-6 relative group overflow-hidden rounded-3xl border border-purple-500/30 bg-gradient-to-br from-slate-900/80 to-purple-900/20 backdrop-blur-xl p-6 shadow-[0_0_30px_rgba(168,85,247,0.15)] hover:shadow-[0_0_40px_rgba(168,85,247,0.25)] hover:border-purple-500/50 transition-all duration-500">
             <div className="absolute -right-10 -top-10 w-40 h-40 bg-purple-500/20 blur-3xl rounded-full pointer-events-none transition-transform duration-700 group-hover:scale-150"></div>
             <div className="absolute -left-10 -bottom-10 w-32 h-32 bg-blue-500/20 blur-3xl rounded-full pointer-events-none"></div>
             
-            <div className="relative z-10 flex items-start gap-4">
-              <div className="mt-1 p-3 bg-purple-500/20 rounded-2xl border border-purple-500/30 text-purple-400 shadow-inner group-hover:bg-purple-500/30 transition-colors">
-                <Sparkles size={24} className="animate-pulse" />
+            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-6">
+              
+              <div className="flex gap-4">
+                <div className="mt-1 p-3 bg-purple-500/20 rounded-2xl border border-purple-500/30 text-purple-400">
+                  <Sparkles size={20} className="animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-[10px] font-bold text-purple-300 uppercase tracking-widest mb-1">{selectedPersona} Health Tip</h3>
+                  <p className="text-sm text-slate-100 font-medium leading-relaxed">{data.insights.healthTip}</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-[11px] font-bold text-purple-300 uppercase tracking-widest mb-2 flex items-center gap-2">
-                  AI Insight 
-                  <span className="flex h-2 w-2 relative">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
-                  </span>
-                </h3>
-                <p className="text-lg md:text-xl text-slate-100 font-medium leading-relaxed drop-shadow-md">
-                  {data.healthTip}
-                </p>
+
+              <div className="flex gap-4">
+                <div className="mt-1 p-3 bg-blue-500/20 rounded-2xl border border-blue-500/30 text-blue-400">
+                  <Activity size={20} />
+                </div>
+                <div>
+                  <h3 className="text-[10px] font-bold text-blue-300 uppercase tracking-widest mb-1">Pollutant Analysis</h3>
+                  <p className="text-sm text-slate-100 font-medium leading-relaxed">{data.insights.analysis}</p>
+                </div>
               </div>
+
+              <div className="flex gap-4">
+                <div className="mt-1 p-3 bg-emerald-500/20 rounded-2xl border border-emerald-500/30 text-emerald-400">
+                  <TrendingUp size={20} />
+                </div>
+                <div>
+                  <h3 className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest mb-1">AI Prediction Result</h3>
+                  <p className="text-sm text-slate-100 font-medium leading-relaxed">{data.insights.prediction}</p>
+                </div>
+              </div>
+
             </div>
           </div>
         )}
@@ -165,7 +196,7 @@ function App() {
                 </div>
              </div>
              <div className="mt-4 pt-4 border-t border-slate-800/50">
-                <p className="text-[10px] text-slate-500">Processing: <span className="text-slate-300 font-mono">{processingInfo?.method || 'N/A'}</span></p>
+                <p className="text-[10px] text-slate-500">Processing: <span className="text-slate-300 font-mono">{processingInfo?.method || 'Standard CPCB'}</span></p>
              </div>
           </div>
 
