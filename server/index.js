@@ -4,13 +4,17 @@ const cors = require('cors');
 const mongoose = require('mongoose'); 
 require('dotenv').config();
 const { generateAIInsights } = require('./services/geminiService');
+const User = require('./models/User');
+const Tree = require('./models/Tree');
 
 const app = express();
 app.use(cors());
+app.use(express.json()); // Add JSON parsing middleware
 const PORT = process.env.PORT || 5000;
 
-// 1. MongoDB Connection (Using 127.0.0.1 for better reliability)
-mongoose.connect("mongodb://127.0.0.1:27017/mumbai_aqi")
+// 1. MongoDB Connection (Using Environment Variable for Deployment)
+const mongoURI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/mumbai_aqi";
+mongoose.connect(mongoURI)
   .then(() => console.log("🍃 MongoDB Connected: Analytics Engine Active"))
   .catch(err => console.error("❌ Connection error:", err));
 
@@ -77,8 +81,8 @@ app.get('/api/air', async (req, res) => {
       const baseAqi = calculateIndianAQI(pm25);
       const processedAqi = applyAdvancedHeuristics(baseAqi, areaName);
 
-      // Fetch history for AI trend prediction
-      const history = await AqiRecord.find({ city: areaName }).sort({ timestamp: -1 }).limit(5);
+      // Fetch history for AI trend prediction (increased to 10 for better forecasting)
+      const history = await AqiRecord.find({ city: areaName }).sort({ timestamp: -1 }).limit(10);
       const recentHistory = history.reverse(); // oldest to newest
 
       // Generate AI-powered insights
@@ -116,6 +120,84 @@ app.get('/api/history', async (req, res) => {
     res.json(history);
   } catch (err) {
     res.status(500).json({ error: "History retrieval failed" });
+  }
+});
+
+// 5. Tree Plantation Routes
+app.get('/api/trees', async (req, res) => {
+  try {
+    const trees = await Tree.find();
+    res.json(trees);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch trees" });
+  }
+});
+
+// Clear all trees (admin cleanup)
+app.delete('/api/trees', async (req, res) => {
+  try {
+    await Tree.deleteMany({});
+    res.json({ status: "ok", message: "All trees cleared" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to clear trees" });
+  }
+});
+
+// 6. User and Carbon Points Routes
+// Get current user (demo user)
+app.get('/api/user', async (req, res) => {
+  try {
+    let user = await User.findOne({ userId: 'demo-user' });
+    if (!user) {
+      user = new User({ userId: 'demo-user', carbonPoints: 0 });
+      await user.save();
+    }
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch user data" });
+  }
+});
+
+// Log an action to earn points
+app.post('/api/actions/log', async (req, res) => {
+  try {
+    const { action, points } = req.body;
+    let user = await User.findOne({ userId: 'demo-user' });
+    if (!user) {
+      user = new User({ userId: 'demo-user', carbonPoints: 0 });
+    }
+    user.carbonPoints += points;
+    user.actionHistory.push({ action, points });
+    await user.save();
+    res.json({ status: "ok", user });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to log action" });
+  }
+});
+
+// Donate to plant a tree
+app.post('/api/donate', async (req, res) => {
+  try {
+    const { latitude, longitude, sponsorType, sponsorName, message } = req.body;
+
+    // If points, deduct them
+    if (sponsorType === 'points') {
+      const pointsCost = req.body.pointsAmount || 100;
+      let user = await User.findOne({ userId: 'demo-user' });
+      if (!user || user.carbonPoints < pointsCost) {
+        return res.status(400).json({ error: `Insufficient Carbon Points. (Requires ${pointsCost}, you have ${user ? user.carbonPoints : 0})` });
+      }
+      user.carbonPoints -= pointsCost;
+      user.actionHistory.push({ action: `Donated ${pointsCost} CP to Plant a Tree`, points: -pointsCost });
+      await user.save();
+    }
+
+    const newTree = new Tree({ latitude, longitude, sponsorType, sponsorName, message });
+    await newTree.save();
+
+    res.json({ status: "ok", tree: newTree });
+  } catch (err) {
+    res.status(500).json({ error: "Donation failed" });
   }
 });
 
