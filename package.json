@@ -1,6 +1,17 @@
 {
+  "scripts": {
+    "test": "npm --prefix server run test && npm --prefix client run lint",
+    "ci": "npm --prefix server run test && npm --prefix client run build",
+    "lint:client": "npm --prefix client run lint",
+    "check:server": "node --check server/index.js"
+  },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
-    "json-as-xlsx": "^2.5.6"
+    "axios": "^1.15.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "json-as-xlsx": "^2.5.6",
+    "mongoose": "^9.4.1"
   }
 }
