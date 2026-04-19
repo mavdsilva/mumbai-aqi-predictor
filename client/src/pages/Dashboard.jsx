@@ -1,22 +1,59 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } from 'recharts';
 import { Wind, AlertCircle, CheckCircle, Activity, ClipboardList, RefreshCw, Download, MapPin, ShieldCheck, TrendingUp, TrendingDown, Sparkles } from 'lucide-react';
 import xlsx from "json-as-xlsx";
 
+// Leaflet default icon fix for Vite/React
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png'
+});
+
 const MUMBAI_STATIONS = [
-  { name: "Central Mumbai (Kurla)", lat: 19.0726, lon: 72.8845 },
-  { name: "South Mumbai (Colaba)", lat: 18.9067, lon: 72.8147 },
-  { name: "Western Suburbs (Bandra)", lat: 19.0550, lon: 72.8400 },
-  { name: "Andheri East", lat: 19.1136, lon: 72.8697 },
-  { name: "Borivali", lat: 19.2307, lon: 72.8567 },
-  { name: "Worli", lat: 19.0161, lon: 72.8168 },
-  { name: "Sion", lat: 19.0390, lon: 72.8619 },
-  { name: "Mazgaon", lat: 18.9633, lon: 72.8412 },
-  { name: "Vile Parle", lat: 19.0968, lon: 72.8485 }
+  { name: 'South Mumbai (Colaba)', lat: 18.9067, lon: 72.8147 },
+  { name: 'Central Mumbai (Kurla)', lat: 19.0726, lon: 72.8845 },
+  { name: 'Western Suburbs (Bandra)', lat: 19.0550, lon: 72.8400 },
+  { name: 'Andheri East', lat: 19.1136, lon: 72.8697 },
+  { name: 'Borivali', lat: 19.2307, lon: 72.8567 },
+  { name: 'Worli', lat: 19.0161, lon: 72.8168 },
+  { name: 'Sion', lat: 19.0390, lon: 72.8619 },
+  { name: 'Vile Parle', lat: 19.0968, lon: 72.8485 },
+  { name: 'Vashi', lat: 19.0772, lon: 72.9987 },
+  { name: 'Thane', lat: 19.2183, lon: 72.9781 },
+  { name: 'Kalyan', lat: 19.2403, lon: 73.1300 },
+  { name: 'Dombivli', lat: 19.2184, lon: 73.0898 },
+  { name: 'Panvel', lat: 18.9984, lon: 73.1187 },
+  { name: 'Vasai', lat: 19.3919, lon: 72.8397 },
+  { name: 'Mira-Bhayandar', lat: 19.3070, lon: 72.8540 },
+  { name: 'Bhiwandi', lat: 19.3005, lon: 73.0570 },
+  { name: 'Uran', lat: 18.9249, lon: 72.9516 },
+  { name: 'Alibag', lat: 18.6417, lon: 72.8797 },
+  { name: 'Navi Mumbai (Nerul)', lat: 19.0330, lon: 73.0185 },
+  { name: 'Mumbra', lat: 19.1538, lon: 73.0314 },
+  { name: 'Thane Creek (Koparkhairane)', lat: 19.1128, lon: 72.9978 }
 ];
 
 const PERSONAS = ["General Public", "Asthma Patient", "Outdoor Athlete", "Elderly"];
+
+const getAqiColor = (aqi) => {
+  if (aqi <= 50) return '#8b5cf6';
+  if (aqi <= 100) return '#facc15';
+  if (aqi <= 200) return '#fb923c';
+  return '#ef4444';
+};
+
+const getAqiLabel = (aqi) => {
+  if (aqi <= 50) return 'Low';
+  if (aqi <= 100) return 'Moderate';
+  if (aqi <= 200) return 'High';
+  return 'Severe';
+};
 
 function Dashboard() {
   const [data, setData] = useState(null);
@@ -27,11 +64,14 @@ function Dashboard() {
   const [selectedPersona, setSelectedPersona] = useState(PERSONAS[0]);
   const [lastUpdated, setLastUpdated] = useState("");
   const [nextRefresh, setNextRefresh] = useState(30);
+  const [bulkAqi, setBulkAqi] = useState([]);
+  const [mapLoading, setMapLoading] = useState(false);
+
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   const fetchAllData = async (station = selectedStation, persona = selectedPersona) => {
     setIsRefreshing(true);
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const liveRes = await axios.get(
         `${API_BASE_URL}/api/air?lat=${station.lat}&lon=${station.lon}&areaName=${station.name}&persona=${encodeURIComponent(persona)}`
       );
@@ -49,6 +89,20 @@ function Dashboard() {
       console.error("Pipeline Error:", err);
     } finally {
       setIsRefreshing(false);
+    }
+  };
+
+  const fetchBulkAqi = async () => {
+    setMapLoading(true);
+    try {
+      const listRes = await axios.get(`${API_BASE_URL}/api/air/bulk`);
+      if (listRes.data.status === 'ok') {
+        setBulkAqi(listRes.data.locations);
+      }
+    } catch (err) {
+      console.error('Bulk AQI fetch error:', err);
+    } finally {
+      setMapLoading(false);
     }
   };
 
@@ -78,10 +132,14 @@ function Dashboard() {
 
   useEffect(() => {
     fetchAllData(MUMBAI_STATIONS[0], PERSONAS[0]);
+    fetchBulkAqi();
   }, []);
 
   useEffect(() => {
-    const refreshTimer = setInterval(() => fetchAllData(selectedStation, selectedPersona), 30000);
+    const refreshTimer = setInterval(() => {
+      fetchAllData(selectedStation, selectedPersona);
+      fetchBulkAqi();
+    }, 30000);
     return () => clearInterval(refreshTimer);
   }, [selectedStation, selectedPersona]);
 
@@ -140,7 +198,7 @@ function Dashboard() {
               {PERSONAS.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
 
-            <button onClick={() => fetchAllData(selectedStation, selectedPersona)} className="p-2 bg-slate-800 rounded-xl hover:bg-slate-700 transition-all">
+            <button onClick={() => { fetchAllData(selectedStation, selectedPersona); fetchBulkAqi(); }} className="p-2 bg-slate-800 rounded-xl hover:bg-slate-700 transition-all">
               <RefreshCw size={18} className={isRefreshing ? "animate-spin" : ""} />
             </button>
             <button onClick={downloadExcel} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-xl text-xs font-bold transition-all">
@@ -152,6 +210,87 @@ function Dashboard() {
             <span>Last synced: <span className="text-slate-200 font-semibold">{lastUpdated || 'Pending'}</span></span>
           </div>
         </header>
+
+        {/* SPATIAL AQI MAP HERO */}
+        <section className="mb-8 grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6">
+          <div className="bg-slate-900/50 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-slate-800/60">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-500 font-bold">MMR Spatial AQI Map</p>
+                <h2 className="text-2xl font-black text-slate-100 mt-2">Real-Time Regional Air Quality</h2>
+                <p className="text-sm text-slate-400 mt-1">Explore AQI for towns, villages, and cities across the Mumbai Metropolitan Region.</p>
+              </div>
+              <div className="text-right text-[11px] text-slate-400">
+                {mapLoading ? 'Refreshing map...' : `${bulkAqi.length} region points`}
+              </div>
+            </div>
+
+            <div className="h-[480px]">
+              <MapContainer center={[19.0760, 72.8777]} zoom={10} className="h-full w-full">
+                <TileLayer
+                  url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                />
+                {bulkAqi.map((location) => (
+                  <CircleMarker
+                    key={location.name}
+                    center={[location.lat, location.lon]}
+                    radius={Math.min(18, Math.max(8, location.aqi / 20))}
+                    pathOptions={{
+                      color: getAqiColor(location.aqi),
+                      fillColor: getAqiColor(location.aqi),
+                      fillOpacity: 0.8,
+                      weight: 1
+                    }}
+                  >
+                    <Popup>
+                      <div className="text-slate-900">
+                        <strong>{location.name}</strong>
+                        <div className="text-[12px] mt-1">AQI: <span className="font-bold">{location.aqi}</span></div>
+                        <div className="text-[11px] text-slate-700 mt-1">Status: {getAqiLabel(location.aqi)}</div>
+                        <div className="text-[11px] mt-2">{location.alert}</div>
+                      </div>
+                    </Popup>
+                  </CircleMarker>
+                ))}
+              </MapContainer>
+            </div>
+          </div>
+
+          <aside className="space-y-6">
+            <div className="bg-slate-900/50 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl p-6">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-4">Vulnerable Area Alerts</h3>
+              {bulkAqi.filter((item) => item.aqi > 100).slice(0, 5).length === 0 ? (
+                <p className="text-sm text-slate-400">No vulnerable zones detected right now. Air quality is moderate or better across the map.</p>
+              ) : (
+                <div className="space-y-4">
+                  {bulkAqi.filter((item) => item.aqi > 100).slice(0, 5).map((item) => (
+                    <div key={item.name} className="p-4 rounded-3xl border border-white/10 bg-slate-950/70">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-bold text-slate-100">{item.name}</p>
+                          <p className="text-[11px] text-slate-500">{getAqiLabel(item.aqi)} zone</p>
+                        </div>
+                        <span className="text-sm font-black" style={{ color: getAqiColor(item.aqi) }}>{item.aqi}</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-3">{item.alert}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="bg-slate-900/50 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl p-6">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-4">AQI Legend</h3>
+              <div className="space-y-3 text-[13px] text-slate-300">
+                <div className="flex items-center gap-3"><span className="h-3 w-3 rounded-full bg-[#8b5cf6]"></span> Low / Violet (AQI ≤ 50)</div>
+                <div className="flex items-center gap-3"><span className="h-3 w-3 rounded-full bg-[#facc15]"></span> Moderate / Yellow (AQI 51-100)</div>
+                <div className="flex items-center gap-3"><span className="h-3 w-3 rounded-full bg-[#fb923c]"></span> High / Orange (AQI 101-200)</div>
+                <div className="flex items-center gap-3"><span className="h-3 w-3 rounded-full bg-[#ef4444]"></span> Severe / Red (AQI 201+)</div>
+              </div>
+            </div>
+          </aside>
+        </section>
 
         {/* AI INSIGHT CARD */}
         {data.insights && (

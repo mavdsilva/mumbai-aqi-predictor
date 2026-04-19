@@ -33,6 +33,43 @@ const AqiSchema = new mongoose.Schema({
 });
 const AqiRecord = mongoose.model('AqiRecord', AqiSchema);
 
+const MMR_LOCATIONS = [
+  { name: 'South Mumbai (Colaba)', lat: 18.9067, lon: 72.8147 },
+  { name: 'Central Mumbai (Kurla)', lat: 19.0726, lon: 72.8845 },
+  { name: 'Western Suburbs (Bandra)', lat: 19.0550, lon: 72.8400 },
+  { name: 'Andheri East', lat: 19.1136, lon: 72.8697 },
+  { name: 'Borivali', lat: 19.2307, lon: 72.8567 },
+  { name: 'Worli', lat: 19.0161, lon: 72.8168 },
+  { name: 'Sion', lat: 19.0390, lon: 72.8619 },
+  { name: 'Vashi', lat: 19.0772, lon: 72.9987 },
+  { name: 'Thane', lat: 19.2183, lon: 72.9781 },
+  { name: 'Kalyan', lat: 19.2403, lon: 73.1300 },
+  { name: 'Dombivli', lat: 19.2184, lon: 73.0898 },
+  { name: 'Panvel', lat: 18.9984, lon: 73.1187 },
+  { name: 'Vasai', lat: 19.3919, lon: 72.8397 },
+  { name: 'Mira-Bhayandar', lat: 19.3070, lon: 72.8540 },
+  { name: 'Bhiwandi', lat: 19.3005, lon: 73.0570 },
+  { name: 'Uran', lat: 18.9249, lon: 72.9516 },
+  { name: 'Alibag', lat: 18.6417, lon: 72.8797 },
+  { name: 'Navi Mumbai (Nerul)', lat: 19.0330, lon: 73.0185 },
+  { name: 'Mumbra', lat: 19.1538, lon: 73.0314 },
+  { name: 'Thane Creek (Koparkhairane)', lat: 19.1128, lon: 72.9978 }
+];
+
+const aqiCategory = (aqi) => {
+  if (aqi <= 50) return { label: 'Low', color: '#8b5cf6', level: 'Good' };
+  if (aqi <= 100) return { label: 'Moderate', color: '#facc15', level: 'Moderate' };
+  if (aqi <= 200) return { label: 'High', color: '#fb923c', level: 'Unhealthy' };
+  return { label: 'Severe', color: '#ef4444', level: 'Very Poor' };
+};
+
+const getHealthAlert = (aqi) => {
+  if (aqi <= 50) return 'Air quality is good. Vulnerable groups are safe outdoors.';
+  if (aqi <= 100) return 'Moderate air quality. Sensitive groups should reduce prolonged outdoor activity.';
+  if (aqi <= 200) return 'High pollution alert. Elderly, children, and asthma patients should avoid outdoor exertion.';
+  return 'Severe pollution alert. All vulnerable individuals should stay indoors and use masks if outside.';
+};
+
 /**
  * MODEL ACCURACY ESTIMATION
  * Uses pollutant stability and distance from moderate thresholds.
@@ -142,6 +179,53 @@ app.get('/api/air', async (req, res) => {
   } catch (error) {
     console.error('Air API error:', error);
     res.status(500).json({ error: 'Internal processing failure' });
+  }
+});
+
+const fetchAqiForLocation = async (location) => {
+  const apiUrl = `http://api.openweathermap.org/data/2.5/air_pollution?lat=${location.lat}&lon=${location.lon}&appid=${process.env.OPENWEATHER_API_KEY}`;
+  const response = await axios.get(apiUrl, { timeout: 10000 });
+  const record = response.data?.list?.[0];
+  if (!record || !record.components) {
+    throw new Error(`No data for ${location.name}`);
+  }
+
+  const pm25 = record.components.pm2_5;
+  if (!isValidCoordinate(pm25)) {
+    throw new Error(`PM2.5 missing for ${location.name}`);
+  }
+
+  const baseAqi = calculateIndianAQI(pm25);
+  const aqi = applyAdvancedHeuristics(baseAqi, location.name);
+  const category = aqiCategory(aqi);
+
+  return {
+    ...location,
+    aqi,
+    pm25,
+    category: category.level,
+    color: category.color,
+    alert: getHealthAlert(aqi),
+    vulnerable: aqi > 100
+  };
+};
+
+app.get('/api/air/bulk', async (req, res) => {
+  try {
+    if (!process.env.OPENWEATHER_API_KEY) {
+      return sendError(res, 500, 'OPENWEATHER_API_KEY is not configured on the server.');
+    }
+
+    const responses = await Promise.allSettled(MMR_LOCATIONS.map(fetchAqiForLocation));
+    const results = responses
+      .filter(r => r.status === 'fulfilled')
+      .map(r => r.value)
+      .sort((a, b) => b.aqi - a.aqi);
+
+    res.json({ status: 'ok', locations: results });
+  } catch (error) {
+    console.error('Bulk AQI API error:', error);
+    res.status(500).json({ error: 'Failed to retrieve bulk AQI data' });
   }
 });
 

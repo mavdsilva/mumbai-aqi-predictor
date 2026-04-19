@@ -43,7 +43,7 @@ When a user selects a locality and their personal health profile ("Persona"):
 * **Frontend:** React (Vite) + TailwindCSS for a premium, glassmorphism UI. Recharts for time-series visualization.
 * **Backend:** Node.js + Express.js API framework.
 * **Database:** MongoDB for persistent telemetry logging, enabling trend analysis.
-* **AI Engine:** `@google/generative-ai` (Gemini 2.5 Flash).
+* **AI Engine:** `@google/generative-ai` (Gemini 2.5 Flash) - Optional for enhanced insights.
 * **Environment Engine:** OpenWeather API.
 
 ---
@@ -53,8 +53,10 @@ When a user selects a locality and their personal health profile ("Persona"):
 ### Prerequisites
 - Node.js (v18+)
 - Local or Cloud MongoDB instance
-- Gemini API Key ([Get it from Google AI Studio](https://aistudio.google.com/))
 - OpenWeather API Key
+
+### Optional
+- Gemini API Key ([Get it from Google AI Studio](https://aistudio.google.com/)) - For AI-powered health insights and predictions. The app works without it using basic static responses.
 
 ### Setup
 
@@ -70,7 +72,7 @@ When a user selects a locality and their personal health profile ("Persona"):
    PORT=5000
    MONGO_URI=mongodb://127.0.0.1:27017/mumbai_aqi
    OPENWEATHER_API_KEY=your_openweather_key
-   GEMINI_API_KEY=your_gemini_key
+   GEMINI_API_KEY=your_gemini_key  # Optional - app works without it
    ```
 
 3. **Start the Backend Server**
