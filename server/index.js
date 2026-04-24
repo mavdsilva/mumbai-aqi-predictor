@@ -16,7 +16,7 @@ const isValidCoordinate = (value) => typeof value === 'number' && Number.isFinit
 const sendError = (res, status, message) => res.status(status).json({ error: message });
 
 // 1. MongoDB Connection (Using Environment Variable for Deployment)
-const mongoURI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/mumbai_aqi";
+const mongoURI = process.env.MONGO_URI || "mongodb+srv://djb06_db_user:dj06@cluster0.xlixxrl.mongodb.net/?appName=Cluster0";
 mongoose.connect(mongoURI)
   .then(() => console.log("🍃 MongoDB Connected: Analytics Engine Active"))
   .catch(err => console.error("❌ Connection error:", err));

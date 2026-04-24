@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+/*
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+*/
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } from 'recharts';
 import { Wind, AlertCircle, CheckCircle, Activity, ClipboardList, RefreshCw, Download, MapPin, ShieldCheck, TrendingUp, TrendingDown, Sparkles } from 'lucide-react';
 import xlsx from "json-as-xlsx";
 
+/*
 // Leaflet default icon fix for Vite/React
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -14,6 +17,7 @@ L.Icon.Default.mergeOptions({
   iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png'
 });
+*/
 
 const MUMBAI_STATIONS = [
   { name: 'South Mumbai (Colaba)', lat: 18.9067, lon: 72.8147 },
@@ -60,40 +64,43 @@ function Dashboard() {
   const [processingInfo, setProcessingInfo] = useState(null);
   const [history, setHistory] = useState([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState(null);
   const [selectedStation, setSelectedStation] = useState(MUMBAI_STATIONS[0]);
   const [selectedPersona, setSelectedPersona] = useState(PERSONAS[0]);
   const [lastUpdated, setLastUpdated] = useState("");
-  const [nextRefresh, setNextRefresh] = useState(30);
+  const [nextRefresh, setNextRefresh] = useState(60);
   const [bulkAqi, setBulkAqi] = useState([]);
-  const [mapLoading, setMapLoading] = useState(false);
+  const [isBulkLoading, setIsBulkLoading] = useState(false);
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   const fetchAllData = async (station = selectedStation, persona = selectedPersona) => {
     setIsRefreshing(true);
+    setError(null);
     try {
       const liveRes = await axios.get(
-        `${API_BASE_URL}/api/air?lat=${station.lat}&lon=${station.lon}&areaName=${station.name}&persona=${encodeURIComponent(persona)}`
+        `${API_BASE_URL}/api/air?lat=${station.lat}&lon=${station.lon}&areaName=${encodeURIComponent(station.name)}&persona=${encodeURIComponent(persona)}`
       );
-      
+
       if (liveRes.data.status === "ok") {
         setData(liveRes.data.data);
         setProcessingInfo(liveRes.data.processingInfo);
         setLastUpdated(new Date().toLocaleTimeString('en-IN'));
-        setNextRefresh(30);
+        setNextRefresh(60);
       }
 
       const historyRes = await axios.get(`${API_BASE_URL}/api/history`);
       setHistory(historyRes.data);
     } catch (err) {
       console.error("Pipeline Error:", err);
+      setError(err.response?.data?.error || err.message || "Failed to fetch data from backend.");
     } finally {
       setIsRefreshing(false);
     }
   };
 
   const fetchBulkAqi = async () => {
-    setMapLoading(true);
+    setIsBulkLoading(true);
     try {
       const listRes = await axios.get(`${API_BASE_URL}/api/air/bulk`);
       if (listRes.data.status === 'ok') {
@@ -102,16 +109,16 @@ function Dashboard() {
     } catch (err) {
       console.error('Bulk AQI fetch error:', err);
     } finally {
-      setMapLoading(false);
+      setIsBulkLoading(false);
     }
   };
 
   const calculateTrend = () => {
-    if (history.length < 2) return { label: "Stable", icon: <Activity size={16}/> };
+    if (history.length < 2) return { label: "Stable", icon: <Activity size={16} /> };
     const diff = history[0].aqi - history[1].aqi;
-    if (diff > 2) return { label: "Degrading", color: "text-red-400", icon: <TrendingUp size={16}/> };
-    if (diff < -2) return { label: "Improving", color: "text-emerald-400", icon: <TrendingDown size={16}/> };
-    return { label: "Stable", color: "text-blue-400", icon: <Activity size={16}/> };
+    if (diff > 2) return { label: "Degrading", color: "text-red-400", icon: <TrendingUp size={16} /> };
+    if (diff < -2) return { label: "Improving", color: "text-emerald-400", icon: <TrendingDown size={16} /> };
+    return { label: "Stable", color: "text-blue-400", icon: <Activity size={16} /> };
   };
 
   const downloadExcel = () => {
@@ -125,7 +132,7 @@ function Dashboard() {
         { label: "Reliability Score", value: "reliabilityScore" },
         { label: "Algorithm", value: "processingMethod" }
       ],
-      content: history, 
+      content: history,
     }];
     xlsx(dataForExcel, settings);
   };
@@ -135,20 +142,22 @@ function Dashboard() {
     fetchBulkAqi();
   }, []);
 
+  /*
   useEffect(() => {
     const refreshTimer = setInterval(() => {
       fetchAllData(selectedStation, selectedPersona);
       fetchBulkAqi();
-    }, 30000);
+    }, 60000);
     return () => clearInterval(refreshTimer);
   }, [selectedStation, selectedPersona]);
 
   useEffect(() => {
     const countdown = setInterval(() => {
-      setNextRefresh((prev) => (prev > 1 ? prev - 1 : 30));
+      setNextRefresh((prev) => (prev > 1 ? prev - 1 : 60));
     }, 1000);
     return () => clearInterval(countdown);
   }, [selectedStation, selectedPersona]);
+  */
 
   const computeAccuracyLabel = () => {
     const accuracyValue = data?.accuracy ?? processingInfo?.accuracy ?? (history[0]?.reliabilityScore || 0.98) * 100;
@@ -157,6 +166,25 @@ function Dashboard() {
 
   const accuracyLabel = computeAccuracyLabel();
 
+  if (error) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-slate-950 text-slate-100 font-mono p-6">
+        <div className="bg-red-500/20 text-red-400 border border-red-500/50 p-6 rounded-2xl max-w-lg text-center shadow-lg">
+          <AlertCircle size={48} className="mx-auto mb-4" />
+          <h2 className="text-xl font-bold mb-2">Connection Failure</h2>
+          <p className="text-sm opacity-80 whitespace-pre-wrap">{error}</p>
+          <p className="text-xs mt-4 text-slate-400">Please check if the backend server is running correctly and API keys are valid.</p>
+          <button
+            onClick={() => fetchAllData(selectedStation, selectedPersona)}
+            className="mt-6 px-6 py-2 bg-slate-800 rounded-xl hover:bg-slate-700 transition"
+          >
+            Retry Connection
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!data) return <div className="h-screen flex items-center justify-center bg-slate-950 text-blue-500 font-mono italic animate-pulse">Initializing Research Pipeline...</div>;
 
   const trend = calculateTrend();
@@ -164,7 +192,7 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-6">
       <div className="max-w-7xl mx-auto">
-        
+
         {/* HEADER */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 bg-slate-900/30 backdrop-blur-xl p-6 rounded-3xl border border-white/10 shadow-2xl relative overflow-hidden">
           <div className="absolute top-[-50%] left-[-10%] w-[30%] h-[200%] bg-blue-500/10 blur-3xl rounded-full transform rotate-45 pointer-events-none"></div>
@@ -172,9 +200,9 @@ function Dashboard() {
             <h1 className="text-4xl font-black tracking-tighter uppercase bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 drop-shadow-sm">Mumbai Air Pulse</h1>
             <p className="text-[10px] text-indigo-200/50 font-mono mt-1.5 tracking-[0.2em]">SMART ANALYTICS ENGINE V2.0.0</p>
           </div>
-          
+
           <div className="flex flex-wrap gap-3 mt-4 md:mt-0 items-center">
-            <select 
+            <select
               className="bg-slate-800 border-none rounded-xl py-2 px-4 text-sm font-bold focus:ring-2 focus:ring-blue-500"
               value={selectedStation.name}
               onChange={(e) => {
@@ -186,7 +214,7 @@ function Dashboard() {
               {MUMBAI_STATIONS.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
             </select>
 
-            <select 
+            <select
               className="bg-slate-800 border-none rounded-xl py-2 px-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 text-purple-300"
               value={selectedPersona}
               onChange={(e) => {
@@ -205,13 +233,14 @@ function Dashboard() {
               <Download size={14} /> EXPORT CSV
             </button>
           </div>
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-[11px] text-slate-400">
-            <span>Auto-refresh every 30s · next update in {nextRefresh}s</span>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end text-[11px] text-slate-400">
+            {/* <span>Auto-refresh every 60s · next update in {nextRefresh}s</span> */}
             <span>Last synced: <span className="text-slate-200 font-semibold">{lastUpdated || 'Pending'}</span></span>
           </div>
         </header>
 
-        {/* SPATIAL AQI MAP HERO */}
+        {/* SPATIAL AQI MAP HERO (COMMENTED OUT) */}
+        {/*
         <section className="mb-8 grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6">
           <div className="bg-slate-900/50 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-slate-800/60">
@@ -221,7 +250,7 @@ function Dashboard() {
                 <p className="text-sm text-slate-400 mt-1">Explore AQI for towns, villages, and cities across the Mumbai Metropolitan Region.</p>
               </div>
               <div className="text-right text-[11px] text-slate-400">
-                {mapLoading ? 'Refreshing map...' : `${bulkAqi.length} region points`}
+                {isBulkLoading ? 'Refreshing map...' : `${bulkAqi.length} region points`}
               </div>
             </div>
 
@@ -260,8 +289,10 @@ function Dashboard() {
           <aside className="space-y-6">
             <div className="bg-slate-900/50 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl p-6">
               <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-4">Vulnerable Area Alerts</h3>
-              {bulkAqi.filter((item) => item.aqi > 100).slice(0, 5).length === 0 ? (
-                <p className="text-sm text-slate-400">No vulnerable zones detected right now. Air quality is moderate or better across the map.</p>
+              {isBulkLoading ? (
+                <p className="text-sm text-slate-400">Fetching regional data...</p>
+              ) : bulkAqi.filter((item) => item.aqi > 100).slice(0, 5).length === 0 ? (
+                <p className="text-sm text-slate-400">No vulnerable zones detected right now. Air quality is moderate or better across the region.</p>
               ) : (
                 <div className="space-y-4">
                   {bulkAqi.filter((item) => item.aqi > 100).slice(0, 5).map((item) => (
@@ -280,8 +311,8 @@ function Dashboard() {
               )}
             </div>
 
-            <div className="bg-slate-900/50 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl p-6">
-              <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-4">AQI Legend</h3>
+            <div className="bg-slate-900/50 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl p-6 h-fit">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-4">AQI Severity Reference</h3>
               <div className="space-y-3 text-[13px] text-slate-300">
                 <div className="flex items-center gap-3"><span className="h-3 w-3 rounded-full bg-[#8b5cf6]"></span> Low / Violet (AQI ≤ 50)</div>
                 <div className="flex items-center gap-3"><span className="h-3 w-3 rounded-full bg-[#facc15]"></span> Moderate / Yellow (AQI 51-100)</div>
@@ -291,6 +322,7 @@ function Dashboard() {
             </div>
           </aside>
         </section>
+        */}
 
         {/* AI INSIGHT CARD */}
         {data.insights && (
@@ -298,7 +330,7 @@ function Dashboard() {
             <div className="relative group overflow-hidden rounded-3xl border border-purple-500/30 bg-gradient-to-br from-slate-900/80 to-purple-900/20 backdrop-blur-xl p-6 shadow-[0_0_30px_rgba(168,85,247,0.15)] hover:shadow-[0_0_40px_rgba(168,85,247,0.25)] hover:border-purple-500/50 transition-all duration-500">
               <div className="absolute -right-10 -top-10 w-40 h-40 bg-purple-500/20 blur-3xl rounded-full pointer-events-none transition-transform duration-700 group-hover:scale-150"></div>
               <div className="absolute -left-10 -bottom-10 w-32 h-32 bg-blue-500/20 blur-3xl rounded-full pointer-events-none"></div>
-              
+
               <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="flex gap-4">
                   <div className="mt-1 p-3 bg-purple-500/20 rounded-2xl border border-purple-500/30 text-purple-400">
@@ -377,38 +409,38 @@ function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
           {/* Main Score */}
           <div className="lg:col-span-1 bg-slate-900/50 backdrop-blur-xl border border-white/10 shadow-2xl p-6 rounded-3xl flex flex-col justify-between relative overflow-hidden group hover:-translate-y-1 hover:border-blue-500/50 transition-all duration-300">
-             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform"><Wind size={80}/></div>
-             <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Weighted AQI</p>
-             <h2 className={`text-7xl font-black my-2 ${data.aqi > 100 ? 'text-orange-500' : 'text-emerald-500'}`}>{data.aqi}</h2>
-             <div className={`flex items-center gap-2 text-xs font-bold uppercase ${data.aqi > 100 ? 'text-orange-400' : 'text-emerald-400'}`}>
-                {data.aqi > 100 ? <AlertCircle size={14}/> : <CheckCircle size={14}/>}
-                {data.aqi > 100 ? 'Elevated Pollution' : 'Safe Atmosphere'}
-             </div>
-             <div className="mt-6 pt-4 border-t border-slate-800/50">
-               <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-2">Live Model Accuracy</p>
-               <div className="text-3xl font-black text-blue-300">{accuracyLabel}</div>
-               <p className="text-[11px] text-slate-400 mt-2">Refreshed every 30 seconds with the latest node-level forecast.</p>
-             </div>
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform"><Wind size={80} /></div>
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Weighted AQI</p>
+            <h2 className={`text-7xl font-black my-2 ${data.aqi > 100 ? 'text-orange-500' : 'text-emerald-500'}`}>{data.aqi}</h2>
+            <div className={`flex items-center gap-2 text-xs font-bold uppercase ${data.aqi > 100 ? 'text-orange-400' : 'text-emerald-400'}`}>
+              {data.aqi > 100 ? <AlertCircle size={14} /> : <CheckCircle size={14} />}
+              {data.aqi > 100 ? 'Elevated Pollution' : 'Safe Atmosphere'}
+            </div>
+            <div className="mt-6 pt-4 border-t border-slate-800/50">
+              <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-2">Live Model Accuracy</p>
+              <div className="text-3xl font-black text-blue-300">{accuracyLabel}</div>
+              <p className="text-[11px] text-slate-400 mt-2">Refreshed every 60 seconds with the latest node-level forecast.</p>
+            </div>
           </div>
 
           {/* Health & Reliability Monitor */}
           <div className="lg:col-span-1 bg-slate-900/50 backdrop-blur-xl border border-white/10 shadow-2xl p-6 rounded-3xl flex flex-col justify-between relative overflow-hidden group hover:-translate-y-1 hover:border-blue-500/50 transition-all duration-300">
-             <div>
-                <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-4">Pipeline Health</p>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-slate-400 italic flex items-center gap-2"><ShieldCheck size={14} className="text-blue-500"/> Reliability Score</span>
-                    <span className="text-xs font-mono font-bold">{(history[0]?.reliabilityScore || 0.98) * 100}%</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-slate-400 italic flex items-center gap-2"><Activity size={14} className="text-purple-500"/> Trend Factor</span>
-                    <span className={`text-xs font-bold flex items-center gap-1 ${trend.color}`}>{trend.icon} {trend.label}</span>
-                  </div>
+            <div>
+              <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-4">Pipeline Health</p>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-slate-400 italic flex items-center gap-2"><ShieldCheck size={14} className="text-blue-500" /> Reliability Score</span>
+                  <span className="text-xs font-mono font-bold">{(history[0]?.reliabilityScore || 0.98) * 100}%</span>
                 </div>
-             </div>
-             <div className="mt-4 pt-4 border-t border-slate-800/50">
-                <p className="text-[10px] text-slate-500">Processing: <span className="text-slate-300 font-mono">{processingInfo?.method || 'Standard CPCB'}</span></p>
-             </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-slate-400 italic flex items-center gap-2"><Activity size={14} className="text-purple-500" /> Trend Factor</span>
+                  <span className={`text-xs font-bold flex items-center gap-1 ${trend.color}`}>{trend.icon} {trend.label}</span>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-slate-800/50">
+              <p className="text-[10px] text-slate-500">Processing: <span className="text-slate-300 font-mono">{processingInfo?.method || 'Standard CPCB'}</span></p>
+            </div>
           </div>
 
           {/* Temporal Analysis Graph */}
@@ -419,14 +451,14 @@ function Dashboard() {
                 <AreaChart data={[...history].reverse()}>
                   <defs>
                     <linearGradient id="colorAqi" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
                   <XAxis dataKey="timestamp" hide />
                   <YAxis hide domain={['auto', 'auto']} />
-                  <Tooltip contentStyle={{backgroundColor: '#0f172a', border: 'none', borderRadius: '12px', fontSize: '10px'}} />
+                  <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '12px', fontSize: '10px' }} />
                   <Area type="monotone" dataKey="aqi" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorAqi)" />
                 </AreaChart>
               </ResponsiveContainer>

@@ -7,7 +7,9 @@ const generateAIInsights = async (wardName, aqiValue, persona, components, histo
       return {
         healthTip: "Monitor local AQI levels and take necessary health precautions.",
         analysis: "API Key missing. Unable to perform detailed pollutant analysis.",
-        prediction: "No data available."
+        prediction: "No data available.",
+        recommendation: "AI recommendations unavailable due to missing API key.",
+        forecast: []
       };
     }
 
@@ -83,8 +85,10 @@ const generateAIInsights = async (wardName, aqiValue, persona, components, histo
     console.error("Error generating Gemini insight:", error);
     return {
       healthTip: "Monitor local AQI levels and take necessary health precautions.",
-      analysis: "Unable to reach AI services.",
-      prediction: "Trend unavailable."
+      analysis: "Unable to reach AI services. Please try again later.",
+      prediction: "Trend unavailable.",
+      recommendation: "Smart AI recommendations are momentarily unavailable.",
+      forecast: []
     };
   }
 };
