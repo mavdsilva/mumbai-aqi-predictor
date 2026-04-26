@@ -7,7 +7,7 @@ import 'leaflet/dist/leaflet.css';
 */
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } from 'recharts';
 import { Wind, AlertCircle, CheckCircle, Activity, ClipboardList, RefreshCw, Download, MapPin, ShieldCheck, TrendingUp, TrendingDown, Sparkles } from 'lucide-react';
-import xlsx from "json-as-xlsx";
+
 
 /*
 // Leaflet default icon fix for Vite/React
@@ -134,7 +134,7 @@ function Dashboard() {
       ],
       content: history,
     }];
-    xlsx(dataForExcel, settings);
+    // xlsx(dataForExcel, settings);
   };
 
   useEffect(() => {
