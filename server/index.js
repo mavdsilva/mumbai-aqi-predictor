@@ -1,7 +1,7 @@
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
-const mongoose = require('mongoose'); 
+const mongoose = require('mongoose');
 require('dotenv').config();
 const { generateAIInsights } = require('./services/geminiService');
 const User = require('./models/User');
@@ -16,7 +16,8 @@ const isValidCoordinate = (value) => typeof value === 'number' && Number.isFinit
 const sendError = (res, status, message) => res.status(status).json({ error: message });
 
 // 1. MongoDB Connection (Using Environment Variable for Deployment)
-const mongoURI = process.env.MONGO_URI || "mongodb+srv://djb06_db_user:dj06@cluster0.xlixxrl.mongodb.net/?appName=Cluster0";
+const mongoURI = "mongodb+srv://djb06_db_user:dj06@cluster0.xlixxrl.mongodb.net/mumbai-aqi?retryWrites=true&w=majority";
+
 mongoose.connect(mongoURI)
   .then(() => console.log("🍃 MongoDB Connected: Analytics Engine Active"))
   .catch(err => console.error("❌ Connection error:", err));
@@ -103,15 +104,15 @@ const applyAdvancedHeuristics = (baseAqi, areaName) => {
 
   // Stable Peak Hour Weight (3% variance)
   if ((hour >= 8 && hour <= 11) || (hour >= 17 && hour <= 21)) {
-    weight = 1.03; 
+    weight = 1.03;
   }
 
   // Ward-Specific Offsets
   const industrialZones = ["Kurla", "Sion", "Andheri"];
   const coastalZones = ["Worli", "Colaba"];
-  
+
   let spatialAdjustment = 0;
-  if (industrialZones.some(zone => areaName.includes(zone))) spatialAdjustment = 5; 
+  if (industrialZones.some(zone => areaName.includes(zone))) spatialAdjustment = 5;
   if (coastalZones.some(zone => areaName.includes(zone))) spatialAdjustment = -2;
 
   return Math.round((baseAqi * weight) + spatialAdjustment);
