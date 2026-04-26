@@ -121,20 +121,25 @@ function Dashboard() {
     return { label: "Stable", color: "text-blue-400", icon: <Activity size={16} /> };
   };
 
-  const downloadExcel = () => {
-    const settings = { fileName: `Mumbai_Research_Data_${new Date().toISOString().split('T')[0]}`, extraLength: 3, writeMode: "writeFile" };
-    const dataForExcel = [{
-      sheet: "Telemetry Logs",
-      columns: [
-        { label: "Timestamp", value: (row) => new Date(row.timestamp).toLocaleString() },
-        { label: "Locality", value: "city" },
-        { label: "AQI (Weighted)", value: "aqi" },
-        { label: "Reliability Score", value: "reliabilityScore" },
-        { label: "Algorithm", value: "processingMethod" }
-      ],
-      content: history,
-    }];
-    //  xlsx(dataForExcel, settings);
+  const downloadExcel = async () => {
+    try {
+      const xlsx = (await import('json-as-xlsx')).default;
+      const settings = { fileName: `Mumbai_Research_Data_${new Date().toISOString().split('T')[0]}`, extraLength: 3, writeMode: "writeFile" };
+      const dataForExcel = [{
+        sheet: "Telemetry Logs",
+        columns: [
+          { label: "Timestamp", value: (row) => new Date(row.timestamp).toLocaleString() },
+          { label: "Locality", value: "city" },
+          { label: "AQI (Weighted)", value: "aqi" },
+          { label: "Reliability Score", value: "reliabilityScore" },
+          { label: "Algorithm", value: "processingMethod" }
+        ],
+        content: history,
+      }];
+      xlsx(dataForExcel, settings);
+    } catch (err) {
+      console.error("Export failed:", err);
+    }
   };
 
   useEffect(() => {
