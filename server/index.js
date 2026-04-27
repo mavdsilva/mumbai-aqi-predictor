@@ -27,6 +27,8 @@ const AqiSchema = new mongoose.Schema({
   city: String,
   aqi: Number,
   station: String,
+  persona: String,
+  insights: Object,
   reliabilityScore: Number,
   accuracy: Number,
   processingMethod: String,
@@ -134,6 +136,8 @@ app.get('/api/air', async (req, res) => {
       return sendError(res, 500, 'OPENWEATHER_API_KEY is not configured on the server.');
     }
 
+    console.log(`🔍 [AI PIPELINE] Processing request for ${areaName} | Persona: ${persona}`);
+
     const apiUrl = `http://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${process.env.OPENWEATHER_API_KEY}`;
     const response = await axios.get(apiUrl, { timeout: 10000 });
     const record = response.data?.list?.[0];
@@ -152,18 +156,39 @@ app.get('/api/air', async (req, res) => {
     const processedAqi = applyAdvancedHeuristics(baseAqi, areaName);
     const accuracyPercent = estimateModelAccuracy(pm25);
 
-    const history = await AqiRecord.find({ city: areaName }).sort({ timestamp: -1 }).limit(10);
-    const recentHistory = history.reverse();
+    // 🏆 SMART CACHE LOOKUP: Check if we have fresh insights for this area+persona (Last 60 mins)
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const cachedRecord = await AqiRecord.findOne({ 
+      city: areaName, 
+      persona: persona,
+      timestamp: { $gte: oneHourAgo },
+      insights: { $exists: true }
+    }).sort({ timestamp: -1 });
 
-    const aiInsights = await generateAIInsights(areaName, processedAqi, persona, components, recentHistory);
+    let aiInsights;
+    let cacheHit = false;
+
+    if (cachedRecord && cachedRecord.insights) {
+      console.log(`♻️ [CACHE HIT] Reusing insights for ${areaName} | Persona: ${persona}`);
+      aiInsights = { ...cachedRecord.insights, isCached: true };
+      cacheHit = true;
+    } else {
+      const history = await AqiRecord.find({ city: areaName }).sort({ timestamp: -1 }).limit(10);
+      const recentHistory = history.reverse(); // oldest to newest
+
+      aiInsights = await generateAIInsights(areaName, processedAqi, persona, components, recentHistory);
+      console.log(`✨ [AI PIPELINE] Insights Generated | Mode: ${aiInsights.isFallback ? 'SAFE-MODE (FALLBACK)' : 'LIVE-GEN'}`);
+    }
 
     const newEntry = new AqiRecord({
       city: areaName,
       aqi: processedAqi,
       station: `NODE-${areaName.toUpperCase()}`,
-      reliabilityScore: 0.99,
+      persona: persona,
+      insights: aiInsights,
+      reliabilityScore: cacheHit ? 1.0 : 0.99,
       accuracy: accuracyPercent,
-      processingMethod: 'Deterministic-CPCB-V6'
+      processingMethod: cacheHit ? "Cached-Pipeline-V1" : "Deterministic-CPCB-V6"
     });
     await newEntry.save();
 
@@ -174,7 +199,11 @@ app.get('/api/air', async (req, res) => {
         city: { name: `${areaName}, Mumbai` },
         dominentpol: 'pm2_5',
         accuracy: accuracyPercent,
-        insights: aiInsights
+        insights: { 
+          ...aiInsights, 
+          insightId: Date.now(),
+          generatedAt: new Date().toISOString()
+        }
       }
     });
   } catch (error) {

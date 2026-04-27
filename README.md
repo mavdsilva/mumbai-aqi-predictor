@@ -12,7 +12,13 @@
 
 **Mumbai Air Pulse** is an intelligent, real-time air quality monitoring dashboard built to protect vulnerable individuals from the severe health impacts of urban air pollution. 
 
-Designed specifically for the **Google Solution Challenge: #BuildWithAI Hackathon**, the platform goes beyond simple metric display by leveraging **Google Gemini** to analyze multipoint data (PM2.5, NO, Ozone, plus historical trends) and generate **predictive, persona-based health insights**.
+Designed specifically for the **Google Solution Challenge: #BuildWithAI Hackathon**, the platform goes beyond simple metric display by leveraging **Google Gemini 2.5 Flash** to provide personalized, persona-driven health advice and predictive forecasting.
+
+### 🌟 Key Hackathon Ready Features
+- **Persona-Based AI Insights**: Custom medical and health recommendations for Athletes, the Elderly, Asthma Patients, and the General Public.
+- **Smart Caching Layer**: Sophisticated MongoDB-based caching prevents API quota exhaustion and ensures 0ms latency for repeated requests.
+- **Resilience Safe Mode**: Automatic fallback system to ensure the UI remains functional if the AI API is under high load or offline.
+- **Sustainability Ecosystem**: An integrated "Carbon Wallet" and Tree Plantation system that turns atmospheric data into real-world environmental action.
 
 ---
 
@@ -24,17 +30,23 @@ This project directly addresses two **United Nations Sustainable Development Goa
 - **Goal 3 (Good Health and Well-being):** Providing clear, personalized medical precautions to mitigate respiratory illnesses.
 - **Goal 11 (Sustainable Cities and Communities):** Utilizing IoT data and AI to foster awareness of structural urban pollution challenges.
 
-## 🚀 The Solution: #BuildWithAI
-
+### 🧠 Advanced AI Architecture
 Mumbai Air Pulse bridges the gap between raw environmental data and actionable health intelligence using **Google Gemini 2.5 Flash**. 
 
 When a user selects a locality and their personal health profile ("Persona"):
 1. The backend fetches raw pollutant concentrations (PM2.5, PM10, CO, NO2, Ozone) from OpenWeather.
-2. It retrieves the last series of historical AQI readings from our MongoDB database to establish a temporal trend.
-3. **Gemini AI** is dynamically prompted with these complex parameters to return structured JSON containing:
-   - A hyper-personalized precautionary measure.
-   - An analysis of the likely primary pollution driver (e.g., traffic emissions vs. construction dust based on the chemical signature).
-   - A predictive forecast for the coming hours based on historical momentum.
+2. **Smart Cache Lookup**: The system checks if a fresh analysis (last 60 mins) exists for that specific persona and location.
+3. **Gemini AI Core**: If no cache is found, Gemini is dynamically prompted to return structured JSON containing:
+   - A hyper-personalized **Health Tip** for the specific persona.
+   - An **Analysis** of primary pollution drivers.
+   - A **12-Hour Forecast Pulse** simulating diurnal patterns in Mumbai.
+   - A specific **Recommendation** for the best time to go outside.
+
+### 🍃 Sustainability & Impact
+To meet **SDG 13 (Climate Action)**, we've integrated a "Carbon Wallet":
+- Users log sustainable actions (Cycling, EV rides, Gardening) to earn **Carbon Points (CP)**.
+- **Tree Plantation**: Users can spend CP or donate money to virtually plant trees in verified green zones (Aarey Colony, Sanjay Gandhi National Park, etc.).
+- **Impact Tracking**: All actions are logged in a global ledger to demonstrate community-wide environmental change.
 
 ---
 

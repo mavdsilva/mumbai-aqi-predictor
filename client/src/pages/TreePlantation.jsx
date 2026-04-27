@@ -149,7 +149,7 @@ export default function TreePlantation() {
 
   const handleAmountNext = () => {
     const amt = parseInt(donationAmount, 10);
-    if (!amt || amt < 100) {
+    if (!amt || amt < 10) {
       setFormError('Minimum donation is ₹100'); return;
     }
     setFormError(''); setPaymentStep('password');

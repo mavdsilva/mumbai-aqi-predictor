@@ -10,15 +10,15 @@ function Navbar() {
   const isActive = (path) => location.pathname === path ? "bg-slate-800 text-blue-400 border-blue-500/50" : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 border-transparent";
 
   return (
-    <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-900/80 backdrop-blur-xl border border-white/10 shadow-2xl px-2 py-2 rounded-2xl flex items-center gap-2 transition-all">
-      <Link to="/" className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border transition-all ${isActive('/')}`}>
-        <Activity size={16} /> Dashboard
+    <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-900/80 backdrop-blur-xl border border-white/10 shadow-2xl px-2 py-2 rounded-2xl flex items-center gap-1 md:gap-2 transition-all max-w-[95%] sm:max-w-none">
+      <Link to="/" className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl text-sm font-bold border transition-all ${isActive('/')}`}>
+        <Activity size={16} /> <span className="hidden sm:inline">Dashboard</span>
       </Link>
-      <Link to="/trees" className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border transition-all ${isActive('/trees')}`}>
-        <Map size={16} /> Tree Map
+      <Link to="/trees" className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl text-sm font-bold border transition-all ${isActive('/trees')}`}>
+        <Map size={16} /> <span className="hidden sm:inline">Tree Map</span>
       </Link>
-      <Link to="/carbon-wallet" className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border transition-all ${isActive('/carbon-wallet')}`}>
-        <Wallet size={16} /> Carbon Wallet
+      <Link to="/carbon-wallet" className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl text-sm font-bold border transition-all ${isActive('/carbon-wallet')}`}>
+        <Wallet size={16} /> <span className="hidden sm:inline">Carbon Wallet</span>
       </Link>
     </nav>
   );

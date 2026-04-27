@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Activity, Footprints, Bike, Car, Wallet, TrendingUp, History, CheckCircle, Sparkles, RefreshCw } from 'lucide-react';
+import { Activity, Footprints, Bike, Car, Wallet, TrendingUp, History, CheckCircle, Sparkles, RefreshCw, Dumbbell, Sprout } from 'lucide-react';
 
 export default function CarbonPoints() {
   const [user, setUser] = useState(null);
@@ -103,9 +103,9 @@ export default function CarbonPoints() {
       </div>
 
       {/* QUICK ACTIONS TO EARN POINTS */}
-      <div>
+      <div className="p-1 md:p-0">
         <h3 className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-4 flex items-center gap-2"><TrendingUp size={14}/> Log Sustainability Actions</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
           
           <button 
             onClick={() => handleLogAction('Walked 2km', 20)}
@@ -141,6 +141,30 @@ export default function CarbonPoints() {
             </div>
             <span className="font-bold text-sm">Shared / EV Ride</span>
             <span className="text-[10px] font-mono text-purple-400 bg-purple-400/10 px-2 py-1 rounded border border-purple-400/20">+30 CP</span>
+          </button>
+
+          <button 
+            onClick={() => handleLogAction('Outdoor Athlete: High-Intensity Park Session', 45)}
+            disabled={isLoading}
+            className="group bg-slate-900/50 hover:bg-slate-800/80 border border-white/5 hover:border-orange-500/50 p-6 rounded-3xl transition-all flex flex-col items-center text-center gap-3 disabled:opacity-50 active:scale-95 cursor-pointer"
+          >
+            <div className="p-3 bg-orange-500/10 text-orange-400 rounded-xl group-hover:scale-110 transition-transform">
+              <Dumbbell size={24} />
+            </div>
+            <span className="font-bold text-sm text-orange-200">Athlete Session</span>
+            <span className="text-[10px] font-mono text-orange-400 bg-orange-400/10 px-2 py-1 rounded border border-orange-400/20">+45 CP</span>
+          </button>
+
+          <button 
+            onClick={() => handleLogAction('Elderly: Morning Terrace Gardening', 25)}
+            disabled={isLoading}
+            className="group bg-slate-900/50 hover:bg-slate-800/80 border border-white/5 hover:border-teal-500/50 p-6 rounded-3xl transition-all flex flex-col items-center text-center gap-3 disabled:opacity-50 active:scale-95 cursor-pointer"
+          >
+            <div className="p-3 bg-teal-500/10 text-teal-400 rounded-xl group-hover:scale-110 transition-transform">
+              <Sprout size={24} />
+            </div>
+            <span className="font-bold text-sm text-teal-200">Terrace Gardening</span>
+            <span className="text-[10px] font-mono text-teal-400 bg-teal-400/10 px-2 py-1 rounded border border-teal-400/20">+25 CP</span>
           </button>
 
         </div>

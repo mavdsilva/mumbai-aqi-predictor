@@ -20,27 +20,15 @@ L.Icon.Default.mergeOptions({
 */
 
 const MUMBAI_STATIONS = [
-  { name: 'South Mumbai (Colaba)', lat: 18.9067, lon: 72.8147 },
-  { name: 'Central Mumbai (Kurla)', lat: 19.0726, lon: 72.8845 },
-  { name: 'Western Suburbs (Bandra)', lat: 19.0550, lon: 72.8400 },
-  { name: 'Andheri East', lat: 19.1136, lon: 72.8697 },
-  { name: 'Borivali', lat: 19.2307, lon: 72.8567 },
-  { name: 'Worli', lat: 19.0161, lon: 72.8168 },
-  { name: 'Sion', lat: 19.0390, lon: 72.8619 },
-  { name: 'Vile Parle', lat: 19.0968, lon: 72.8485 },
-  { name: 'Vashi', lat: 19.0772, lon: 72.9987 },
-  { name: 'Thane', lat: 19.2183, lon: 72.9781 },
-  { name: 'Kalyan', lat: 19.2403, lon: 73.1300 },
-  { name: 'Dombivli', lat: 19.2184, lon: 73.0898 },
-  { name: 'Panvel', lat: 18.9984, lon: 73.1187 },
-  { name: 'Vasai', lat: 19.3919, lon: 72.8397 },
-  { name: 'Mira-Bhayandar', lat: 19.3070, lon: 72.8540 },
-  { name: 'Bhiwandi', lat: 19.3005, lon: 73.0570 },
-  { name: 'Uran', lat: 18.9249, lon: 72.9516 },
-  { name: 'Alibag', lat: 18.6417, lon: 72.8797 },
-  { name: 'Navi Mumbai (Nerul)', lat: 19.0330, lon: 73.0185 },
-  { name: 'Mumbra', lat: 19.1538, lon: 73.0314 },
-  { name: 'Thane Creek (Koparkhairane)', lat: 19.1128, lon: 72.9978 }
+  { name: "Central Mumbai (Kurla)", lat: 19.0726, lon: 72.8845 },
+  { name: "South Mumbai (Colaba)", lat: 18.9067, lon: 72.8147 },
+  { name: "Western Suburbs (Bandra)", lat: 19.0550, lon: 72.8400 },
+  { name: "Andheri East", lat: 19.1136, lon: 72.8697 },
+  { name: "Borivali", lat: 19.2307, lon: 72.8567 },
+  { name: "Worli", lat: 19.0161, lon: 72.8168 },
+  { name: "Sion", lat: 19.0390, lon: 72.8619 },
+  { name: "Mazgaon", lat: 18.9633, lon: 72.8412 },
+  { name: "Vile Parle", lat: 19.0968, lon: 72.8485 }
 ];
 
 const PERSONAS = ["General Public", "Asthma Patient", "Outdoor Athlete", "Elderly"];
@@ -67,6 +55,7 @@ function Dashboard() {
   const [error, setError] = useState(null);
   const [selectedStation, setSelectedStation] = useState(MUMBAI_STATIONS[0]);
   const [selectedPersona, setSelectedPersona] = useState(PERSONAS[0]);
+  const [isInsightLoading, setIsInsightLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState("");
   const [nextRefresh, setNextRefresh] = useState(60);
   const [bulkAqi, setBulkAqi] = useState([]);
@@ -76,7 +65,6 @@ function Dashboard() {
 
   const fetchAllData = async (station = selectedStation, persona = selectedPersona) => {
     setIsRefreshing(true);
-    setError(null);
     try {
       const liveRes = await axios.get(
         `${API_BASE_URL}/api/air?lat=${station.lat}&lon=${station.lon}&areaName=${encodeURIComponent(station.name)}&persona=${encodeURIComponent(persona)}`
@@ -96,6 +84,7 @@ function Dashboard() {
       setError(err.response?.data?.error || err.message || "Failed to fetch data from backend.");
     } finally {
       setIsRefreshing(false);
+      setIsInsightLoading(false);
     }
   };
 
@@ -195,18 +184,18 @@ function Dashboard() {
   const trend = calculateTrend();
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-6">
+    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
 
         {/* HEADER */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 bg-slate-900/30 backdrop-blur-xl p-6 rounded-3xl border border-white/10 shadow-2xl relative overflow-hidden">
+        <header className="flex flex-col md:flex-row justify-between items-center md:items-center mb-6 md:mb-8 bg-slate-900/30 backdrop-blur-xl p-4 md:p-6 rounded-3xl border border-white/10 shadow-2xl relative overflow-hidden text-center md:text-left">
           <div className="absolute top-[-50%] left-[-10%] w-[30%] h-[200%] bg-blue-500/10 blur-3xl rounded-full transform rotate-45 pointer-events-none"></div>
-          <div className="relative z-10">
-            <h1 className="text-4xl font-black tracking-tighter uppercase bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 drop-shadow-sm">Mumbai Air Pulse</h1>
+          <div className="relative z-10 mb-4 md:mb-0">
+            <h1 className="text-3xl md:text-4xl font-black tracking-tighter uppercase bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 drop-shadow-sm">Mumbai Air Pulse</h1>
             <p className="text-[10px] text-indigo-200/50 font-mono mt-1.5 tracking-[0.2em]">SMART ANALYTICS ENGINE V2.0.0</p>
           </div>
 
-          <div className="flex flex-wrap gap-3 mt-4 md:mt-0 items-center">
+          <div className="flex flex-wrap gap-3 mt-4 md:mt-0">
             <select
               className="bg-slate-800 border-none rounded-xl py-2 px-4 text-sm font-bold focus:ring-2 focus:ring-blue-500"
               value={selectedStation.name}
@@ -331,8 +320,15 @@ function Dashboard() {
 
         {/* AI INSIGHT CARD */}
         {data.insights && (
-          <div className="space-y-6 mb-8">
-            <div className="relative group overflow-hidden rounded-3xl border border-purple-500/30 bg-gradient-to-br from-slate-900/80 to-purple-900/20 backdrop-blur-xl p-6 shadow-[0_0_30px_rgba(168,85,247,0.15)] hover:shadow-[0_0_40px_rgba(168,85,247,0.25)] hover:border-purple-500/50 transition-all duration-500">
+          <div className={`space-y-6 mb-8 transition-all duration-700 ${isInsightLoading ? 'opacity-50 grayscale scale-[0.98]' : 'opacity-100'}`}>
+            <div key={data.insights.insightId} className="relative group overflow-hidden rounded-3xl border border-purple-500/30 bg-gradient-to-br from-slate-900/80 to-purple-900/20 backdrop-blur-xl p-6 shadow-[0_0_30px_rgba(168,85,247,0.15)] hover:shadow-[0_0_40px_rgba(168,85,247,0.25)] hover:border-purple-500/50 transition-all duration-500">
+              {isInsightLoading && (
+                <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/20 backdrop-blur-sm">
+                  <div className="flex items-center gap-2 text-purple-400 font-black animate-pulse uppercase text-xs tracking-widest">
+                    <Sparkles className="animate-spin" size={16} /> Re-Calibrating Insights...
+                  </div>
+                </div>
+              )}
               <div className="absolute -right-10 -top-10 w-40 h-40 bg-purple-500/20 blur-3xl rounded-full pointer-events-none transition-transform duration-700 group-hover:scale-150"></div>
               <div className="absolute -left-10 -bottom-10 w-32 h-32 bg-blue-500/20 blur-3xl rounded-full pointer-events-none"></div>
 
@@ -342,7 +338,16 @@ function Dashboard() {
                     <Sparkles size={20} className="animate-pulse" />
                   </div>
                   <div>
-                    <h3 className="text-[10px] font-bold text-purple-300 uppercase tracking-widest mb-1">{selectedPersona} Health Tip</h3>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-[10px] font-bold text-purple-300 uppercase tracking-widest">{selectedPersona} Health Tip</h3>
+                      {data.insights.isFallback ? (
+                        <span className="text-[8px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded font-black animate-pulse">AI SAFE MODE</span>
+                      ) : data.insights.isCached ? (
+                        <span className="text-[8px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded font-black">SYSTEM CACHED</span>
+                      ) : (
+                        <span className="text-[8px] bg-blue-500/20 text-blue-400 border border-blue-500/30 px-1.5 py-0.5 rounded font-black">AI LIVE</span>
+                      )}
+                    </div>
                     <p className="text-sm text-slate-100 font-medium leading-relaxed">{data.insights.healthTip}</p>
                   </div>
                 </div>
@@ -484,6 +489,7 @@ function Dashboard() {
                 <tr className="text-slate-500 text-[10px] uppercase tracking-widest border-b border-slate-800">
                   <th className="pb-4">Epoch Time</th>
                   <th className="pb-4">Target Node</th>
+                  <th className="pb-4">Target Persona</th>
                   <th className="pb-4">Heuristic AQI</th>
                   <th className="pb-4">Reliability</th>
                   <th className="pb-4">Accuracy</th>
@@ -495,6 +501,7 @@ function Dashboard() {
                   <tr key={i} className="hover:bg-slate-800/20 transition-colors">
                     <td className="py-4 font-mono text-[10px] text-slate-500">{new Date(record.timestamp).toLocaleString()}</td>
                     <td className="py-4 text-xs font-bold text-blue-400">{record.city}</td>
+                    <td className="py-4 font-bold text-[10px] text-purple-400 uppercase tracking-tighter">{record.persona || 'General'}</td>
                     <td className={`py-4 text-xs font-black ${record.aqi > 100 ? 'text-orange-500' : 'text-emerald-500'}`}>{record.aqi}</td>
                     <td className="py-4 text-[10px] font-mono">{(record.reliabilityScore || 0.98).toFixed(2)}</td>
                     <td className="py-4 text-[10px] font-mono">{record.accuracy ? `${record.accuracy}%` : 'N/A'}</td>
